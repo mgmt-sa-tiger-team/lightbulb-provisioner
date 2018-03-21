@@ -1,0 +1,54 @@
+- name: install EPEL
+  yum:
+    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+    state: present
+  register: install_epel
+  until: install_epel|success
+  delay: 3
+  retries: 5
+
+- name: install packages
+  yum:
+    name:
+      - git
+      - asciidoctor
+    state: latest
+    enablerepo: epel
+  register: install_base_packages
+  until: install_base_packages|success
+  delay: 3
+  retries: 5
+
+- name: checkout the decks from git
+  git:
+    repo: "{{ workshop_decks_git_repo_url }}"
+    dest: /tmp/decks
+    accept_hostkey: yes
+    clone: yes
+
+- name: copy decks
+  synchronize:
+    src: /tmp/decks/decks
+    dest: /usr/share/nginx/html
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: create workshop content directory
+  file:
+    path: /usr/share/nginx/html/workshop
+    state: directory
+
+- name: checkout the content from git
+  git:
+    repo: "{{ workshop_content_git_repo_url }}"
+    dest: /tmp/workshop-content
+    accept_hostkey: yes
+    clone: yes
+
+- name: copy workshop content
+  synchronize:
+    src: /tmp/workshop-content/_preview/
+    dest: /usr/share/nginx/html
+  delegate_to: "{{ inventory_hostname }}"
+
+#- name: generate html
+#  command: asciidoctor /tmp/workshop-content/{{ workshop_ascii_doc_file_name }} -D /usr/share/nginx/html/workshop -o index.html

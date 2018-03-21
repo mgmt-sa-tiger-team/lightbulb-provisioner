@@ -1,0 +1,224 @@
+---
+- name: Find ec2 amis
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  vars_files:
+    - "group_vars/all/vars"
+    - "group_vars/all/vault"
+  roles:
+    - ec2-find-amis
+
+- name: Generate users and nodes lists
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  vars_files:
+    - "workshop_nodes/{{ workshop_name }}/hosting-nodes-ec2.yml"
+    - "workshop_nodes/{{ workshop_name }}/student-nodes-ec2.yml"
+  roles:
+    - generate-nodes-and-users
+
+- name: provision linux ec2 instances
+  hosts: localhost
+  become: no
+  roles:
+    - role: ansible-role-ec2
+      nodes: "{{ linux_nodes }}"
+      when: linux_nodes is defined
+
+- name: add linux hosts to groups
+  hosts: localhost
+  become: no
+  roles:
+    - create-runtime-inventory
+
+- name: provision windows ec2 instances
+  hosts: localhost
+  become: no
+  vars:
+    ansible_port: 5986
+  roles:
+    - role: ansible-role-ec2
+      instance_wait_connection_timeout: 800
+      nodes: "{{ windows_nodes }}"
+      when: windows_nodes is defined
+
+- name: add windows hosts to groups and generate content
+  hosts: localhost
+  become: no
+  roles:
+    - create-runtime-inventory
+    - generate-content
+
+- name: configure common options on all linux nodes
+  hosts: tag_app_management_lightbulb:!tag_role_hosting:!tag_role_windows
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  roles:
+    - user_accounts
+    - common
+
+- name: change hostname on all windows nodes
+  hosts: tag_app_management_lightbulb:&tag_role_windows
+  remote_user: Administrator
+  become: no
+  vars:
+    ansible_port: 5986
+    ansible_password: "{{ domain_admin_password }}"
+    ansible_connection: winrm
+    ansible_winrm_transport: basic
+    ansible_winrm_server_cert_validation: ignore
+  gather_facts: false
+  pre_tasks:
+    - name: wait for connection on windows nodes
+      wait_for_connection:
+        delay: 60
+        sleep: 15
+        timeout: 900
+
+    - name: gather facts
+      setup:
+      register: setup_task
+      until: setup_task|success
+      delay: 3
+      retries: 5
+  roles:
+    - windows-hostname
+
+- name: configure common options on windows domain controller
+  hosts: tag_app_management_lightbulb:&tag_role_windows_domain_controller
+  remote_user: Administrator
+  become: no
+  vars:
+    ansible_port: 5986
+    ansible_password: "{{ domain_admin_password }}"
+    ansible_connection: winrm
+    ansible_winrm_transport: basic
+    ansible_winrm_server_cert_validation: ignore
+  gather_facts: true
+  pre_tasks:
+    - debug:
+        msg: "users list for windows ad controller role: {{ hostvars.localhost.users }}"
+  roles:
+    - role: windows-ad-controller
+      users: "{{ hostvars.localhost.users }}"
+
+- name: configure common options on all windows workstations
+  hosts: tag_app_management_lightbulb:&tag_role_windows_workstation
+  remote_user: Administrator
+  become: no
+  vars:
+    ansible_port: 5986
+    ansible_password: "{{ domain_admin_password }}"
+    ansible_connection: winrm
+    ansible_winrm_transport: basic
+    ansible_winrm_server_cert_validation: ignore
+  gather_facts: true
+  roles:
+    - windows-common
+    - windows-workstation
+
+- name: configure common options on all windows nodes
+  hosts: tag_app_management_lightbulb:&tag_role_windows_node
+  remote_user: Administrator
+  become: no
+  vars:
+    ansible_port: 5986
+    ansible_password: "{{ domain_admin_password }}"
+    ansible_connection: winrm
+    ansible_winrm_transport: basic
+    ansible_winrm_server_cert_validation: ignore
+  gather_facts: true
+  roles:
+    - windows-common
+
+- name: configure gitlab host
+  hosts: tag_app_management_lightbulb:&tag_role_gitlab
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  roles:
+    - { role: linux-dns, when: groups.tag_role_windows_domain_controller is defined }
+    - { role: geerlingguy.gitlab, when: groups.tag_role_windows_domain_controller is defined }
+
+# run post-config separate to avoid handler restart issue
+- name: configure gitlab host
+  hosts: tag_app_management_lightbulb:&tag_role_gitlab
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  roles:
+    - { role: gitlab-postconfig, users: "{{ hostvars.localhost.users }}", when: groups.tag_role_windows_domain_controller is defined }
+
+- name: configure control node
+  hosts: tag_role_control:&tag_app_management_lightbulb
+  become: yes
+  roles:
+    - role: control-node
+      users: "{{ hostvars.localhost.users }}"
+    - { role: linux-dns, when: groups.tag_role_windows_domain_controller is defined }
+    - geerlingguy.repo-epel
+    - geerlingguy.nodejs
+    - wetty
+
+- name: provision tower
+  hosts: tag_role_tower:&tag_app_management_lightbulb
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  vars_files:
+    - "group_vars/all/vars"
+    - "group_vars/all/vault"
+  roles:
+    - provision-ansible-tower
+    - tower-harden
+    - tower-add-content
+    - geerlingguy.repo-epel
+    - geerlingguy.nodejs
+    - wetty
+
+- name: provision cfme
+  hosts: tag_role_cfme:&tag_app_management_lightbulb
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  vars_files:
+    - "group_vars/all/vars"
+    - "group_vars/all/vault"
+  roles:
+    - provision-cfme
+    - cfme-add-provider-ec2
+    - cfme-add-provider-tower
+
+- name: setup hosting
+  hosts: tag_role_hosting:&tag_app_management_lightbulb
+  become: yes
+  # on standard RHEL AMIs extras repo not enabled which is needed by the geerlingguy.certbot role
+  pre_tasks:
+    - name: enable optional repos
+      command: yum-config-manager --enable rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional
+  roles:
+    - provision-dns-ec2
+    - { role: geerlingguy.repo-epel, when: nginx_ssl }
+    - { role: geerlingguy.certbot, when: nginx_ssl }
+    - { role: nginx-ssl, users: "{{ hostvars.localhost.users }}", when: nginx_ssl }
+    - { role: nginx, users: "{{ hostvars.localhost.users }}", when: not nginx_ssl }
+    - hosting-generate-html
+    - hosting-upload-content
+
+- name: email inventory to instructor
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  roles:
+    - email-instructor

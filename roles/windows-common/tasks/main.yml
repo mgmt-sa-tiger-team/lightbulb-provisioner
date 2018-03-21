@@ -1,0 +1,112 @@
+---
+# tasks file for windows-common
+- name: Add domain controller private IP as DNS server
+  win_dns_client:
+    adapter_names: "*"
+    ipv4_addresses: "{{ dns_servers }}"
+
+#- name: Ensure local workgroup first
+#  win_domain_membership:
+#    workgroup_name: "{{ username }}"
+#    domain_admin_user: "Admin@{{ dns_domain_name }}"
+#    domain_admin_password: "{{ domain_admin_password }}"
+#    state: workgroup
+#  register: winworkgroup
+#  until: winworkgroup|success
+#  delay: 3
+#  retries: 5
+
+#- debug: var=winworkgroup
+
+#- name: Reset domain password
+#  win_shell: $secpasswd = ConvertTo-SecureString "{{ domain_admin_password }}" -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential("Admin@{{ dns_domain_name }}", $secpasswd); Reset-ComputerMachinePassword -Server "{{ dns_servers[0] }}" -Credential $credential
+#  register: reset_domain_password
+#  ignore_errors: yes
+
+# Test-ComputerSecureChannel -repair -credential
+
+#- name: Reset domain membership
+#  win_shell: $computer = Get-WmiObject Win32_ComputerSystem; $computer.UnjoinDomainOrWorkGroup("{{ domain_admin_password }}", "Admin@{{ dns_domain_name }}", 0); $computer.JoinDomainOrWorkGroup("{{ dns_domain_name }}", "{{ domain_admin_password }}", "Admin@{{ dns_domain_name }}", $null, 3)
+#  register: reset_domain_membership
+
+#- debug:
+#    var: reset_domain_membership
+
+#- name: Join Domain
+#  win_domain_membership:
+#    dns_domain_name: "{{ dns_domain_name }}"
+#    domain_admin_user: "Admin@{{ dns_domain_name }}"
+#    domain_admin_password: "{{ domain_admin_password }}"
+#    state: domain
+#  register: windomain
+#  until: windomain|success
+#  delay: 3
+#  retries: 5
+
+#- debug: var=windomain
+
+- name: Add a powershell module
+  win_psmodule:
+    name: xComputerManagement
+    state: present
+
+#- name: Join Workgroup
+#  win_dsc:
+#    resource_name: xComputer
+#    Name: "{{ hostname }}"
+#    WorkGroupName: "Workgroup"
+#    credential_username: "Administrator"
+#    credential_password: "{{ ansible_password }}"
+#  register: dsc_join_workgroup
+
+- name: Join Domain
+  win_dsc:
+    resource_name: xComputer
+    Name: "{{ hostname }}"
+    DomainName: "{{ dns_domain_name }}"
+    credential_username: "Admin@{{ dns_domain_name }}"
+    credential_password: "{{ domain_admin_password }}"
+  register: dsc_join_domain
+
+- debug:
+    var: dsc_join_domain
+
+- name: Reboot if needed
+  win_reboot:
+  when: dsc_join_domain.reboot_required
+
+- name: Get current DNS search string
+  win_shell: Get-DnsClientGlobalSetting | Select SuffixSearchList 
+  changed_when: false
+  register: suffixsearchlist
+
+- debug: var=suffixsearchlist
+
+- name: Set DNS search string 
+  win_shell: Set-DnsClientGlobalSetting -SuffixSearchList {{ dns_domain_name }}, ec2.internal
+  when: "dns_domain_name not in suffixsearchlist.stdout"
+
+- name: Add user to Remote Desktop Users group
+  win_group_membership:
+    name: Remote Desktop Users
+    members:
+      - '{{ dns_domain_name }}\{{ username }}'
+    state: present
+  register: remote_desktop_group
+  until: remote_desktop_group|success
+  delay: 3
+  retries: 10
+  ignore_errors: yes
+
+#- name: Add user to Remote Desktop Users group
+#  win_dsc:
+#    resource_name: group
+#    GroupName: Remote Desktop Users
+#    Ensure: Present
+#    MembersToInclude: '{{ username }}@{{ dns_domain_name }}'
+#    credential_username: "Admin@{{ dns_domain_name }}"
+#    credential_password: "{{ domain_admin_password }}"
+#  register: add_user_to_rdp_group
+
+#- debug:
+#    var: add_user_to_rdp_group
