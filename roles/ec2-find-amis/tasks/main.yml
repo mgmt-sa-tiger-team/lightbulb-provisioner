@@ -12,7 +12,7 @@
 
 - name: find ami for cfme
   ec2_ami_find:
-    name: "{{ image_names['cfme-58'] }}"
+    name: "{{ image_names['cfme-591'] }}"
     region: "{{ ec2_region }}"
   register: cfme_ami_find
 
