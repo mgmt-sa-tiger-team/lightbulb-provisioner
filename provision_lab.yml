@@ -50,7 +50,8 @@
   hosts: localhost
   become: no
   roles:
-    - create-runtime-inventory
+    - role: create-runtime-inventory
+      when: windows_nodes is defined
     - generate-content
 
 - name: configure common options on all linux nodes
