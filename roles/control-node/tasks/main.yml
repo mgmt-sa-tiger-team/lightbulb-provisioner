@@ -44,7 +44,6 @@
     - control
   when: control_node_install_ansible
 
-
 - name: Clone lightbulb
   git:
     accept_hostkey: yes

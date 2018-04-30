@@ -79,8 +79,6 @@ wget http://releases.ansible.com/ansible-tower/setup/ansible-tower-setup-latest.
 {% if groups.tag_role_control is defined %}
       For SSH access over web ({{ user.username }}/{{ admin_password }}):<br />
 {% for vm in groups.tag_role_control if vm in groups['tag_pod_' + user.username] %}
-<a href="/{{ user.username }}" target="control_node_url_{{ user.username }}">{{ user.username }}</a><br />
-      or<br />
 <a href="https://{{ vm }}:{{ wetty_port }}" target="control_node_url_{{ user.username }}">https://{{ vm }}:{{ wetty_port }}</a><br />
 {% endfor %}
 {% endif %}<br />
