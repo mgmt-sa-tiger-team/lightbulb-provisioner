@@ -105,8 +105,3 @@
     - control_node
     - control
 
-- name: fix .ssh directory permission
-  file:
-    path: /home/{{ username }}/.ssh
-    mode: 700
-
