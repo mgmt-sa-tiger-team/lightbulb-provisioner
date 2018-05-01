@@ -16,7 +16,7 @@
 
 [web]
 {% for vm in groups.tag_role_web if vm in groups['tag_pod_' + item.username] %}
-{{ hostvars[vm].hostname }} ansible_host={{ vm }}
+{{ hostvars[vm].hostname }} ansible_host={{ vm }} ansible_port=22 ansible_user={{ item.username }} ansible_password={{ admin_password }}
 {% endfor %}
 {% endif %}
 {% if groups.tag_role_windows_node is defined %}
