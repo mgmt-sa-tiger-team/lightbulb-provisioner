@@ -43,7 +43,7 @@
     state: directory
     group:   "{{ system_user }}"
     owner:   "{{ system_user }}"
-    mode: 0400
+    mode: 0700
 
 - name: Generate Self Signed Certs
   command: >
