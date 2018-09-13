@@ -19,23 +19,35 @@
 - name: set ami id for rhel7
   set_fact:
     rhel7_ami_id: "{{ rhel7_ami_find.results[0].ami_id }}"
-  when: rhel7_ami_find.results is defined
+  when:
+    - rhel7_ami_find.results is defined
+    - rhel7_ami_find.results[0].ami_id is defined
 
 - name: set ami id for windows 2016
   set_fact:
     win2016_ami_id: "{{ win2016_ami_find.results[0].ami_id }}"
-  when: win2016_ami_find.results is defined
+  when:
+    - win2016_ami_find.results is defined
+    - win2016_ami_find.results[0].ami_id is defined
 
 - name: set ami id for cfme
   set_fact:
     cfme_ami_id: "{{ cfme_ami_find.results[0].ami_id }}"
-  when: cfme_ami_find.results is defined
+  when:
+    - cfme_ami_find.results is defined
+    - cfme_ami_find.results[0].ami_id is defined
 
 - debug:
     var: rhel7_ami_id
+  when:
+  - rhel7_ami_id is defined
 
 - debug:
     var: win2016_ami_id
+  when:
+  - win2016_ami_id is defined
 
 - debug:
     var: cfme_ami_id
+  when:
+  - cfme_ami_id is defined
