@@ -1,59 +1,156 @@
 ---
-- name: create private key
-  lineinfile:
-    dest: /tmp/private_key.pem
-    line: "{{ ec2_private_key }}"
-    create: yes
 
-- name: add aws creds
-  command: tower-cli credential create --kind aws --name=student-ec2 --organization=Default --username {{ student_ec2_access }} --password {{ student_ec2_secret }}
-  no_log: True
+- name: Delete demo inventory
+  uri:
+    url:  https://localhost/api/v2/inventories/1/
+    method: DELETE
+    user: admin
+    password: "{{ tower_pass }}"
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 202
+      - 204
+      - 400
+      - 404
+  register: response
+  changed_when: response.status == 204
 
-- name: add ec2 creds
-  command: tower-cli credential create --kind ssh --username centos --user admin --organization Default --name ec2-centos-user --ssh-key-data /tmp/private_key.pem
-  no_log: True
+- name: Delete demo project
+  uri:
+    url:  https://localhost/api/v2/projects/4/
+    method: DELETE
+    user: admin
+    password: "{{ tower_pass }}"
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 202
+      - 204
+      - 400
+      - 404
+  register: response
+  changed_when: response.status == 204
 
-- name: remove file
-  file:
-    state: absent
-    path: /tmp/private_key.pem
+- name: Delete demo template
+  uri:
+    url:  https://localhost/api/v2/job_templates/5/
+    method: DELETE
+    user: admin
+    password: "{{ tower_pass }}"
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 202
+      - 204
+      - 400
+      - 404
+  register: response
+  changed_when: response.status == 204
+
+- name: Delete demo credential
+  uri:
+    url:  https://localhost/api/v2/credentials/1/
+    method: DELETE
+    user: admin
+    password: "{{ tower_pass }}"
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 202
+      - 204
+      - 400
+      - 404
+  register: response
+  changed_when: response.status == 204
 
 - name: create inventory
-  command: tower-cli inventory create -n aws --organization=Default 
-  register: inventory
-  retries: 10
-  until: inventory.rc == 0
-  ignore_errors: yes
-  delay: 5
+  uri:
+    url:  https://localhost/api/v2/inventories/
+    method: POST
+    user: admin
+    password: "{{ tower_pass }}"
+    body: "{{ lookup('file','tower_inventory.json') }}"
+    body_format: json
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 400
+  register: response
+  changed_when: response.status == 201
 
 - name: create group
-  command: tower-cli group create -n aws --credential student-ec2 -i aws --source ec2 --source-regions {{ student_ec2_region }} --instance-filters "tag:name={{ student_ec2_name_prefix }}-{{ ec2_tag_pod }}*"
-  register: group
-  retries: 10
-  until: group.rc == 0
-  ignore_errors: yes
-  delay: 5
+  uri:
+    url:  https://localhost/api/v2/groups/
+    method: POST
+    user: admin
+    password: "{{ tower_pass }}"
+    body: "{{ lookup('template','tower_group.json.j2') }}"
+    body_format: json
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 400
+  register: response
+  changed_when: response.status == 201
 
-- name: create project ansible-nginx-example
-  command: tower-cli project create -n ansible-nginx-example --scm-type git --scm-url {{ git_url }}
-  register: project
-  retries: 10
-  until: project.rc == 0
-  ignore_errors: yes
-  delay: 5
+- name: create host
+  uri:
+    url:  https://localhost/api/v2/hosts/
+    method: POST
+    user: admin
+    password: "{{ tower_pass }}"
+    body: "{{ lookup('template','tower_host.json.j2') }}"
+    body_format: json
+    validate_certs: False
+    status_code:
+      - 200
+      - 201
+      - 400
+  register: response
+  changed_when: response.status == 201
 
-- name: create job template nginx_provision_job_template
-  command: tower-cli job_template create --name provision-nginx-on-ec2 --project=ansible-nginx-example --inventory=aws --machine-credential ec2-centos-user --cloud-credential student-ec2 --playbook nginx_full_ec2.yml --verbosity default --become-enabled True --extra-vars "ec2_key_name={{ student_ec2_key_name }} ec2_region={{ student_ec2_region }} ec2_name_prefix={{ student_ec2_name_prefix }}-{{ ec2_tag_pod }} ec2_vpc_id={{ student_ec2_vpc_id }} ec2_vpc_subnet_id={{ student_ec2_vpc_subnet_id }} hosted_zone_domain_name=rhdemo.io subdomain={{ student_ec2_name_prefix }}-{{ ec2_tag_pod }}-nginx"
-  register: nginx_provision_job_template
-  retries: 10
-  until: nginx_provision_job_template.rc == 0
-  ignore_errors: yes
-  delay: 5
+- name: Associate host to group
+  uri:
+    url:  https://localhost/api/v2/groups/1/hosts/
+    method: POST
+    user: admin
+    password: "{{ tower_pass }}"
+    body: '{ "id": 2 }'
+    body_format: json
+    validate_certs: False
+    status_code:
+      - 200
+      - 204
+      - 400
+  register: response
+  changed_when: response.status == 204
 
-- name: create job template nginx_terminate_job_template
-  command: tower-cli job_template create --name terminate-nginx-on-ec2 --project=ansible-nginx-example --inventory=aws --machine-credential ec2-centos-user --cloud-credential student-ec2 --playbook nginx_teardown_ec2.yml --verbosity default --become-enabled True --extra-vars "ec2_key_name={{ student_ec2_key_name }} ec2_region={{ student_ec2_region }} ec2_name_prefix={{ student_ec2_name_prefix }}-{{ ec2_tag_pod }} ec2_vpc_id={{ student_ec2_vpc_id }} ec2_vpc_subnet_id={{ student_ec2_vpc_subnet_id }} hosted_zone_domain_name=rhdemo.io subdomain={{ student_ec2_name_prefix }}-{{ ec2_tag_pod }}-nginx"
-  register: nginx_terminate_job_template
-  retries: 10
-  until: nginx_terminate_job_template.rc == 0
-  ignore_errors: yes
-  delay: 5
+- name: Add win_shell/win_feature/win_reboot to allowed adhoc modules
+  uri:
+    url:  https://localhost/api/v2/settings/all/
+    method: PATCH
+    user: admin
+    password: "{{ tower_pass }}"
+    body: "{{ lookup('template','tower_config_adhoc.json.j2') }}"
+    body_format: json
+    validate_certs: False
+    status_code:
+      - 200
+      - 204
+      - 400
+  register: response
+  changed_when: response.status == 200
+
+- name: Disable GIT Cert validation
+  lineinfile:
+    path: /etc/tower/settings.py
+    regexp: 'GIT_SSL_NO_VERIFY'
+    line: "AWX_TASK_ENV['GIT_SSL_NO_VERIFY'] = 'True'"
+  notify: restart tower

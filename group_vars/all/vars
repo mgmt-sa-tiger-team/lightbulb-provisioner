@@ -28,6 +28,7 @@ workshop_names:
   - w1-ansible-tower-lb
   - w2-tower-cf-lb
   - w3-ansible-tower-win-lb
+  - w4-ansible-tower-only-win-lb
 
 nginx_ssl: yes
 

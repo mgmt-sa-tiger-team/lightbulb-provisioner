@@ -4,7 +4,7 @@
     name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
     state: present
   register: install_epel
-  until: install_epel|success
+  until: install_epel is success
   delay: 3
   retries: 5
 
@@ -15,7 +15,7 @@
     state: latest
     enablerepo: epel-testing
   register: install_base_packages
-  until: install_base_packages|success
+  until: install_base_packages is success
   delay: 3
   retries: 5
 
@@ -25,9 +25,17 @@
       - ansible
     state: latest
   register: install_ansible
-  until: install_ansible|success
+  until: install_ansible is success
   delay: 3
   retries: 5
+
+- name: Install pywinrm for connecting to windows hosts
+  pip:
+    name: "{{ item }}"
+  with_items:
+    - pywinrm>=0.2.2
+    - pywinrm[kerberos]
+    - pywinrm[credssp]
 
 - name: get tar for ansibletower
   get_url:
@@ -84,7 +92,7 @@
     body_format: json
   register: add_license
   retries: 10
-  until: add_license|success
+  until: add_license is success
   ignore_errors: yes
   delay: 5
 
@@ -92,15 +100,18 @@
   yum:
     name: python2-pip
     state: latest
+  ignore_errors: yes
 
 - name: install manageiq-client
   pip:
     name: manageiq-client
+  ignore_errors: yes
 
 - name: install ansible-tower-cli
   pip:
     name: ansible-tower-cli
     version: 3.1.4
+  ignore_errors: yes
 
 - name: copy tower-cli config /etc/tower/tower_cli.cfg
   template:
@@ -115,6 +126,7 @@
     mode: 0644
     owner: root
     group: root
+  ignore_errors: yes
 
 # see https://github.com/ansible/ansible/pull/31760
 - name: fixing cloudforms inventory script
@@ -124,3 +136,4 @@
     mode: 0755
     owner: root
     group: root
+  ignore_errors: yes
