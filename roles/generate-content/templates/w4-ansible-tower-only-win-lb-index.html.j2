@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<font face="verdana,sans,arial">
+<style>
+
+/* unvisited link */
+a:link {
+    color: #FF6978;
+}
+
+/* visited link */
+a:visited {
+    color: #FF6978;
+}
+
+/* mouse over link */
+a:hover {
+    color: #3DCCCC;
+}
+
+/* selected link */
+a:active {
+    color: blue;
+}
+Try it Yourself »
+
+</style>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+</head>
+<body>
+
+<div data-role="page" id="pageone">
+  <div data-role="header">
+    <h1>Ansible Lightbulb Workshop</h1>
+  </div>
+  <div data-role="main">
+    <img src="https://www.ansible.com/hubfs/2016_Images/Assets/Ansible-Tower-Logotype-Small-RGB-FullBlack.png"/>
+    <h3>CONTACT: "{{ instructor_email }}"<br>
+
+
+GITHUB for Ansible Lightbulb: <a href="https://github.com/ansible/lightbulb" target="lightbulb">https://github.com/ansible/lightbulb</a><br><br>
+
+</h3>
+
+<h3><b><font color="gray">URLs for lab materials: </font></b></h3>
+
+
+<h4><a href="decks/ansible-essentials.html" target="new_1">DECK: Ansible Essentials</a><br></h4>
+<h4><a href="decks/intro-to-ansible-tower.html" target="new_2">DECK: Intro To Tower</a><br></h4>
+<h4><a href="ansible-windows-workshop/latest/ansible_windows_workshop/0-setup/index.html" target="new_main">LAB GUIDE</a><br><br></h4>
+
+<hr>
+
+
+
+<h3><a href="https://www.ansible.com/workshop-license" target="new_2">Click here to request a license for the workshop (You will receive the key to your email)</a><br><br></h3>
+
+
+<!--<h3><a href="http://ansible-workshop.redhatgov.io/workshop-files/ansible_tower_license.txt" target="new_gd_license">4-Node NFR Lightbulb license is available here</a><br><br></h3>-->
+
+<hr>
+  </div>
+{% for user in users %}
+  <div data-role="main" class="ui-content">
+    <div data-role="collapsible">
+      <h1>{{ user.username }} - Click to see details!</h1>
+      <h2>Use the links below</h2><br />
+{% if groups.tag_role_windows_workstation is defined %}
+      Login to your workstation using RDP.
+{% for vm in groups.tag_role_windows_workstation if vm in groups['tag_pod_' + user.username] %}
+      Open a remote desktop connection session to <b>{{ vm }}</b> (username: <b>{{ dns_domain_name }}\{{ user.username }}</b>, password: <b>{{ users_password }}</b>)<br />
+{% endfor %}
+{% endif %}<br />
+{% if groups.tag_role_gitlab is defined %}
+      Login to your gitlab URL:
+{% for vm in groups.tag_role_gitlab if vm in groups['tag_pod_main'] %}
+<a href="https://{{ vm }}" target="gl_url_{{ user.username }}">https://{{ vm }}</a>  (username: <b>{{ user.username }}</b>, password: <b>{{ users_password }}</b>)<br />
+{% endfor %}
+{% endif %}<br />
+{% if groups.tag_role_tower is defined %}
+      tower node SSH access over web ({{ user.username }}/{{ admin_password }}):<br />
+{% for vm in groups.tag_role_tower if vm in groups['tag_pod_' + user.username] %}
+<a href="https://{{ vm }}" target="tower_node_url_{{ user.username }}">https://{{ vm }}</a><br />
+{% endfor %}
+{% endif %}<br />
+<br />
+      <h2>Inventory</h2>
+      <p>[all:vars]<br />
+ansible_user={{ user.username }}<br />
+ansible_ssh_pass={{ admin_password }}<br />
+{% if ssh_port is defined %}<br />
+ansible_port={{ ssh_port }}<br />
+{% endif %}
+<br />
+{% if groups.tag_role_windows_node is defined %}
+[windows]<br />
+{% for vm in groups.tag_role_windows_node if vm in groups['tag_pod_' + user.username] %}
+{{ hostvars[vm].hostname }} ansible_host={{ vm }} ansible_user={{ hostvars[vm].ansible_user }} ansible_password={{ hostvars[vm].ansible_password }}<br />
+{% endfor %}
+{% endif %}
+<br />
+{% if groups.tag_role_windows_workstation is defined %}
+[windows_workstation]<br />
+{% for vm in groups.tag_role_windows_workstation if vm in groups['tag_pod_' + user.username] %}
+{{ hostvars[vm].hostname }} ansible_host={{ vm }} ansible_user={{ hostvars[vm].ansible_user }} ansible_password={{ hostvars[vm].ansible_password }}<br />
+{% endfor %}
+{% endif %}
+<br />
+{% if groups.tag_role_windows is defined %}
+[windows:vars]<br />
+ansible_connection=winrm<br />
+ansible_winrm_transport=basic<br />
+ansible_winrm_server_cert_validation=ignore<br />
+ansible_port=5986<br />
+{% endif %}
+<br />
+{% if groups.tag_role_tower is defined %}
+[tower]<br />
+{% for vm in groups.tag_role_tower if vm in groups['tag_pod_' + user.username] %}
+{{ hostvars[vm].hostname }} ansible_host={{ vm }} ansible_port=22 ansible_user={{ user.username }} ansible_password={{ admin_password }}<br />
+{% endfor %}
+{% endif %}</p>
+    </div>
+  </div>
+{% endfor %}
+  <div data-role="footer">
+    <h1>Thanks for participating!</h1>
+  </div>
+</div>
+
+</body>
+</html>
