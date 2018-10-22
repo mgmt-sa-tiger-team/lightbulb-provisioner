@@ -26,3 +26,13 @@
     - inventory
     - users
     - user_accounts
+
+- name: Generate guacamole user mapping
+  template:
+    src: "{{ workshop_name }}-user-mapping.xml.j2"
+    dest: ./user-mapping.xml
+  when: guacamole
+  tags:
+    - inventory
+    - users
+    - user_accounts

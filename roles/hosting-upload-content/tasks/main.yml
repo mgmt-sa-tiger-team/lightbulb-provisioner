@@ -3,6 +3,20 @@
     src: index.html
     dest: /usr/share/nginx/html/index.html
 
+- name: copy user-mapping.xml (1/2)
+  copy:
+    src: user-mapping.xml
+    dest: /etc/guacamole/user-mapping.xml
+  when: guacamole
+  notify: restart tomcat
+
+- name: copy user-mapping.xml (2/2)
+  file:
+    src: /etc/guacamole/user-mapping.xml
+    dest: /usr/share/tomcat/.guacamole/user-mapping.xml
+    state: link
+  when: guacamole
+
 - name: set selinux
   sefcontext:
     target: '/usr/share/nginx/html'

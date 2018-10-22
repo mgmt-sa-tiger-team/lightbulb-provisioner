@@ -32,6 +32,8 @@ workshop_names:
 
 nginx_ssl: yes
 
+guacamole: yes
+
 workshop_name: w1-ansible-tower-lb
 
 workshop_content_git_repo_url: https://github.com/oatakan/management-lightbulb-content.git

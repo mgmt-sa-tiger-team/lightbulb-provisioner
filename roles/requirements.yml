@@ -8,3 +8,7 @@
 - src: geerlingguy.gitlab
 
 - src: geerlingguy.certbot
+
+- src: joe-speedboat.ansible_mariadb
+
+- src: joe-speedboat.ansible_guacamole

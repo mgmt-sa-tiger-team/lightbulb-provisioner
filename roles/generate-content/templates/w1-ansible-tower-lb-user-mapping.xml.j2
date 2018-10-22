@@ -1,0 +1,28 @@
+<user-mapping>
+
+{% for user in users %}
+    <authorize username="{{ user.username }}" password="{{ admin_password }}">
+{% if groups.tag_role_web is defined %}
+{% for vm in groups.tag_role_web if vm in groups['tag_pod_' + user.username] %}
+        <connection name="web_{{ hostvars[vm].hostname }}">
+            <protocol>ssh</protocol>
+            <param name="{{ vm }}">localhost</param>
+            <param name="port">{{ ssh_port }}</param>
+        </connection>
+{% endfor %}
+{% endif %}
+
+{% if groups.tag_role_control is defined %}
+{% for vm in groups.tag_role_control if vm in groups['tag_pod_' + user.username] %}
+        <connection name="control_{{ hostvars[vm].hostname }}">
+            <protocol>ssh</protocol>
+            <param name="{{ vm }}">localhost</param>
+            <param name="port">{{ ssh_port }}</param>
+        </connection>
+{% endfor %}
+{% endif %}
+
+    </authorize>
+{% endfor %}
+
+</user-mapping>
