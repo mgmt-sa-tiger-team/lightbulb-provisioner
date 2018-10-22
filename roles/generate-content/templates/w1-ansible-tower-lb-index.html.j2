@@ -79,7 +79,11 @@ wget http://releases.ansible.com/ansible-tower/setup/ansible-tower-setup-latest.
 {% if groups.tag_role_control is defined %}
       For SSH access over web ({{ user.username }}/{{ admin_password }}):<br />
 {% for vm in groups.tag_role_control if vm in groups['tag_pod_' + user.username] %}
+{% if guacamole is defined and guacamole %}
+<a href="rdp/#/?username={{ user.username }}&password={{ admin_password }}" target="rdp_url_{{ user.username }}">Remote Login</a><br />
+{% else %}
 <a href="https://{{ vm }}:{{ wetty_port }}" target="control_node_url_{{ user.username }}">https://{{ vm }}:{{ wetty_port }}</a><br />
+{% endif %}
 {% endfor %}
 {% endif %}<br />
       <h2>Inventory</h2>

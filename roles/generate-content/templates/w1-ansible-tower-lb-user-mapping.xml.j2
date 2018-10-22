@@ -6,8 +6,10 @@
 {% for vm in groups.tag_role_web if vm in groups['tag_pod_' + user.username] %}
         <connection name="web_{{ hostvars[vm].hostname }}">
             <protocol>ssh</protocol>
-            <param name="{{ vm }}">localhost</param>
+            <param name="hostname">{{ vm }}</param>
             <param name="port">{{ ssh_port }}</param>
+            <param name="username">{{ user.username }}</param>
+            <param name="password">{{ admin_password }}</param>
         </connection>
 {% endfor %}
 {% endif %}
@@ -16,8 +18,10 @@
 {% for vm in groups.tag_role_control if vm in groups['tag_pod_' + user.username] %}
         <connection name="control_{{ hostvars[vm].hostname }}">
             <protocol>ssh</protocol>
-            <param name="{{ vm }}">localhost</param>
+            <param name="hostname">{{ vm }}</param>
             <param name="port">{{ ssh_port }}</param>
+            <param name="username">{{ user.username }}</param>
+            <param name="password">{{ admin_password }}</param>
         </connection>
 {% endfor %}
 {% endif %}
