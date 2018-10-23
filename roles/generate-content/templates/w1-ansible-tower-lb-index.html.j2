@@ -81,7 +81,7 @@ wget http://releases.ansible.com/ansible-tower/setup/ansible-tower-setup-latest.
 {% for vm in groups.tag_role_control if vm in groups['tag_pod_' + user.username] %}
 {% if guacamole is defined and guacamole %}
 <a href="rdp/#/?username={{ user.username }}&password={{ admin_password }}" target="rdp_url_{{ user.username }}">Remote Login</a><br />
-Note: Press <b>Ctrl+Alt+Shift</b> to paste into clipboard.<br />
+<p><small>Note: Press <b>Ctrl+Alt+Shift</b> to paste into clipboard.</small></p>
 {% else %}
 <a href="https://{{ vm }}:{{ wetty_port }}" target="control_node_url_{{ user.username }}">https://{{ vm }}:{{ wetty_port }}</a><br />
 {% endif %}
