@@ -16,6 +16,7 @@ server {
 
     server_name {{ ec2_name_prefix }}.{{ dns_domain_name }};
 
+{% if guacamole is defined and guacamole %}
     location /rdp/ {
         proxy_pass http://localhost:8080/guacamole/;
         proxy_buffering off;
@@ -26,6 +27,7 @@ server {
         proxy_cookie_path /guacamole/ /rdp/;
         access_log off;
     }
+{% endif %}
 
     location / {
         root   /usr/share/nginx/html;
