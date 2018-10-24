@@ -1,6 +1,9 @@
 - src: https://github.com/oatakan/ansible-role-ec2
   version: origin/master
 
+- src: https://github.com/oatakan/ansible.guacamole
+  version: origin/master
+
 - src: geerlingguy.repo-epel
 
 - src: geerlingguy.nodejs
@@ -11,4 +14,4 @@
 
 - src: bertvv.mariadb
 
-- src: joe-speedboat.ansible_guacamole
+- src: ansible.guacamole

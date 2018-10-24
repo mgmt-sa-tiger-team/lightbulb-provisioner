@@ -214,7 +214,7 @@
     - { role: nginx-ssl, users: "{{ hostvars.localhost.users }}", when: nginx_ssl }
     - { role: nginx, users: "{{ hostvars.localhost.users }}", when: not nginx_ssl }
     - { role: bertvv.mariadb, when: guacamole }
-    - { role: joe-speedboat.ansible_guacamole, when: guacamole }
+    - { role: ansible.guacamole, when: guacamole }
     - hosting-generate-html
     - hosting-upload-content
 
