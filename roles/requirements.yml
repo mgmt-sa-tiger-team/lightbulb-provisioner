@@ -1,6 +1,9 @@
 - src: https://github.com/oatakan/ansible-role-ec2
   version: origin/master
 
+- src: https://github.com/oatakan/ansible.mariadb
+  version: origin/master
+
 - src: https://github.com/oatakan/ansible.guacamole
   version: origin/master
 
@@ -11,7 +14,3 @@
 - src: geerlingguy.gitlab
 
 - src: geerlingguy.certbot
-
-- src: bertvv.mariadb
-
-- src: ansible.guacamole
