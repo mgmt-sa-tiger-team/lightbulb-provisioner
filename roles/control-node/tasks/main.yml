@@ -29,10 +29,11 @@
     - control_node
     - control
 
+# ansible 2.7.1 breaks tower installation 3.3.0 and 3.3.1 due to ansible-tower == 3.3.1 in version name
 - name: Install Ansible
   pip:
     name:
-      - ansible
+      - ansible==2.7.0
       - pywinrm
     state: latest
   register: install_ansible
