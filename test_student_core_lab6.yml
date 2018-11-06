@@ -1,0 +1,67 @@
+---
+- name: check student lab 6
+  hosts: tag_role_control:&tag_app_management_lightbulb
+  become: yes
+  roles:
+    - role: control-node
+      users: "{{ hostvars.localhost.users }}"
+    - { role: linux-dns, when: groups.tag_role_windows_domain_controller is defined }
+    - geerlingguy.repo-epel
+    - geerlingguy.nodejs
+    - wetty
+
+- name: provision tower
+  hosts: tag_role_tower:&tag_app_management_lightbulb
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  vars_files:
+    - "group_vars/all/vars"
+    - "group_vars/all/vault"
+  roles:
+    - provision-ansible-tower
+    - tower-harden
+    - tower-add-content
+    - geerlingguy.repo-epel
+    - geerlingguy.nodejs
+    - wetty
+
+- name: provision cfme
+  hosts: tag_role_cfme:&tag_app_management_lightbulb
+  become: yes
+  remote_user: ec2-user
+  become_method: sudo
+  gather_facts: true
+  vars_files:
+    - "group_vars/all/vars"
+    - "group_vars/all/vault"
+  roles:
+    - provision-cfme
+    - cfme-add-provider-ec2
+    - cfme-add-provider-tower
+
+- name: setup hosting
+  hosts: tag_role_hosting:&tag_app_management_lightbulb
+  become: yes
+  # on standard RHEL AMIs extras repo not enabled which is needed by the geerlingguy.certbot role
+  pre_tasks:
+    - name: enable optional repos
+      command: yum-config-manager --enable rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional
+  roles:
+    - provision-dns-ec2
+    - { role: geerlingguy.repo-epel, when: nginx_ssl }
+    - { role: geerlingguy.certbot, when: nginx_ssl }
+    - { role: nginx-ssl, users: "{{ hostvars.localhost.users }}", when: nginx_ssl }
+    - { role: nginx, users: "{{ hostvars.localhost.users }}", when: not nginx_ssl }
+    - { role: ansible.guacamole, when: guacamole }
+    - hosting-generate-html
+    - hosting-upload-content
+
+- name: email inventory to instructor
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  roles:
+    - email-instructor
