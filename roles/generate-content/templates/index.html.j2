@@ -1,0 +1,6 @@
+<html>
+my ip address: {{ ansible_ipv4.address }}
+{% if http_port is defined %}
+my port number: {{ http_port }}
+{% endif %}
+</html>
